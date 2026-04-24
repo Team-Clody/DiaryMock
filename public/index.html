@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diary Mock Calendar</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>일기 목데이터 캘린더</h1>
+
+      <section class="query-card">
+        <h2>내 이메일 조회</h2>
+        <div class="query-row">
+          <input
+            id="emailInput"
+            type="email"
+            placeholder="이메일을 입력하세요"
+            autocomplete="off"
+          />
+          <button id="emailSearchBtn" type="button">조회</button>
+        </div>
+        <p id="emailResult" class="query-result">조회 결과가 여기에 표시됩니다.</p>
+      </section>
+
+      <section class="month-selector" id="monthSelector"></section>
+
+      <section class="calendar-card">
+        <h2 id="calendarTitle"></h2>
+        <div class="calendar-grid weekdays" id="weekdays"></div>
+        <div class="calendar-grid days" id="daysGrid"></div>
+      </section>
+
+      <section class="diary-card">
+        <h2 id="diaryTitle">날짜를 선택해주세요</h2>
+        <p class="diary-guide">
+          캘린더에서 날짜를 누른 뒤 모드를 선택해 작성하세요.
+        </p>
+        <div class="mode-switch">
+          <button id="diaryModeBtn" class="mode-btn active" type="button">일기작성 모드</button>
+          <button id="draftModeBtn" class="mode-btn" type="button">임시저장 모드</button>
+        </div>
+        <div id="diaryInputs" class="diary-inputs"></div>
+        <div id="diaryModePanel">
+          <div class="diary-actions">
+            <button id="addDiaryBtn" type="button">+</button>
+            <button id="saveDiaryBtn" type="button">전송</button>
+          </div>
+          <h3 class="sub-title">일기 목록</h3>
+          <ul id="existingDiaries" class="existing-diaries"></ul>
+        </div>
+        <div id="draftModePanel" class="hidden">
+          <div class="diary-actions">
+            <button id="addDraftBtn" type="button">+</button>
+            <button id="saveDraftBtn" type="button">임시저장</button>
+          </div>
+          <h3 class="sub-title">임시저장 목록</h3>
+          <ul id="draftList" class="draft-list"></ul>
+        </div>
+        <p id="diaryResult" class="query-result">아직 저장된 내용이 없습니다.</p>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

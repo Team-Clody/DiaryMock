@@ -1,0 +1,407 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 920px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 28px;
+}
+
+.query-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.query-card h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.query-row {
+  display: flex;
+  gap: 8px;
+}
+
+.query-row input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.query-row button {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.query-result {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.month-selector {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.month-btn {
+  border: 1px solid #d0d8e5;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.month-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.calendar-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+#calendarTitle {
+  margin: 0 0 12px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.weekdays div {
+  text-align: center;
+  font-weight: 700;
+  padding: 8px 0;
+}
+
+.days div {
+  min-height: 64px;
+  border: 1px solid #edf1f7;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafcff;
+  cursor: pointer;
+}
+
+.days .empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.days .selected-day {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.day-number {
+  font-weight: 600;
+}
+
+.diary-badge {
+  margin-top: 6px;
+  display: inline-block;
+  font-size: 12px;
+  color: #1d4ed8;
+}
+
+.draft-badge {
+  margin-top: 4px;
+  display: inline-block;
+  font-size: 12px;
+  color: #0f766e;
+}
+
+.reply-badge {
+  margin-top: 4px;
+  display: inline-block;
+  font-size: 12px;
+  color: #7c3aed;
+}
+
+.diary-card {
+  margin-top: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.diary-card h2 {
+  margin: 0 0 8px;
+}
+
+.diary-guide {
+  margin: 0 0 12px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.mode-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.hidden {
+  display: none;
+}
+
+.sub-title {
+  margin: 14px 0 8px;
+  font-size: 15px;
+  color: #334155;
+}
+
+.diary-inputs {
+  display: grid;
+  gap: 8px;
+}
+
+.diary-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.diary-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.diary-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+#addDiaryBtn {
+  background: #1d4ed8;
+  min-width: 44px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#addDraftBtn {
+  background: #0ea5e9;
+  min-width: 44px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#saveDraftBtn {
+  background: #0f766e;
+}
+
+#saveDiaryBtn {
+  background: #111827;
+}
+
+.diary-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.existing-diaries {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  color: #374151;
+}
+
+.draft-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.draft-item {
+  background: #ecfeff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.draft-item-content {
+  color: #164e63;
+}
+
+.delete-draft-btn {
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.draft-item-empty {
+  color: #64748b;
+  font-size: 13px;
+  padding: 6px 2px;
+}
+
+.existing-diary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.diary-item-content {
+  font-size: 16px;
+  color: #1f2937;
+  line-height: 1.35;
+}
+
+.delete-diary-btn {
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.delete-diary-btn:hover {
+  background: #dc2626;
+}
+
+.reply-area {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  background: #f1f5f9;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.reply-status {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.reply-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.reply-btn {
+  border: none;
+  background: #334155;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.reply-btn:hover {
+  background: #1e293b;
+}
+
+.reply-content-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  background: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .query-row {
+    flex-direction: column;
+  }
+
+  .month-selector {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .days div {
+    min-height: 52px;
+  }
+
+  .diary-actions {
+    flex-direction: column;
+  }
+}
