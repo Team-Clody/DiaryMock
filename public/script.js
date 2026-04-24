@@ -721,9 +721,13 @@ async function saveDiaries() {
     }
 
     diaryResult.textContent = `${data.selectedDate} ${data.diaryTime ?? ""} (서울)에 ${data.insertedCount}개 저장 완료`;
-    resetDiaryInputs();
+    diaryInputs.innerHTML = "";
+    diaryInputCount = 0;
+    syncDiaryButtons();
     await loadMonthlyDiaries();
     await loadDraftsForSelectedDay();
+    resetDiaryInputs();
+    syncDiaryWriteUi();
     renderExistingDiaries();
   } catch (error) {
     diaryResult.textContent = "네트워크 오류가 발생했습니다.";
@@ -775,8 +779,13 @@ async function saveDraft() {
     }
 
     diaryResult.textContent = `임시저장 ${data.insertedCount ?? contents.length}개 완료 (${data.diaryTime ?? ""} 서울)`;
+    diaryInputs.innerHTML = "";
+    diaryInputCount = 0;
+    syncDiaryButtons();
     await loadMonthlyDiaries();
     await loadDraftsForSelectedDay();
+    resetDiaryInputs();
+    syncDiaryWriteUi();
   } catch (error) {
     diaryResult.textContent = "네트워크 오류가 발생했습니다.";
   }
