@@ -35,6 +35,36 @@ function parseCookies(cookieHeader = "") {
   }, {});
 }
 
+/** 서울 달력 기준 일기 작성 시각 (HH:mm 또는 HH:mm:ss). 빈 값이면 20:00:00. */
+function normalizeDiaryTimeSeoul(raw) {
+  const fallback = "20:00:00";
+  if (raw === undefined || raw === null || String(raw).trim() === "") {
+    return { ok: true, time: fallback };
+  }
+  const parts = String(raw).trim().split(":");
+  if (parts.length < 2 || parts.length > 3) {
+    return { ok: false };
+  }
+  const h = Number(parts[0]);
+  const min = Number(parts[1]);
+  const sec = parts[2] !== undefined && parts[2] !== "" ? Number(parts[2]) : 0;
+  if (
+    !Number.isInteger(h) ||
+    h < 0 ||
+    h > 23 ||
+    !Number.isInteger(min) ||
+    min < 0 ||
+    min > 59 ||
+    !Number.isInteger(sec) ||
+    sec < 0 ||
+    sec > 59
+  ) {
+    return { ok: false };
+  }
+  const time = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  return { ok: true, time };
+}
+
 function isAuthenticated(req) {
   const cookies = parseCookies(req.headers.cookie || "");
   return cookies[AUTH_COOKIE_NAME] === AUTH_COOKIE_VALUE;
@@ -136,15 +166,16 @@ app.get("/api/diaries/calendar", async (req, res) => {
     const result = await pool.query(
       `
       SELECT
-        EXTRACT(DAY FROM timezone('Asia/Seoul', d.created_at))::int AS day,
+        EXTRACT(DAY FROM d.created_at)::int AS day,
         d.id,
-        d.content
+        d.content,
+        to_char(d.created_at, 'HH24:MI:SS') AS written_time
       FROM diaries d
       JOIN users u ON u.id = d.user_id
       WHERE u.email = $1
         AND d.is_deleted = false
-        AND EXTRACT(YEAR FROM timezone('Asia/Seoul', d.created_at))::int = $2
-        AND EXTRACT(MONTH FROM timezone('Asia/Seoul', d.created_at))::int = $3
+        AND EXTRACT(YEAR FROM d.created_at)::int = $2
+        AND EXTRACT(MONTH FROM d.created_at)::int = $3
       ORDER BY d.created_at ASC
       `,
       [email, year, month],
@@ -162,6 +193,7 @@ app.get("/api/diaries/calendar", async (req, res) => {
       byDay[row.day].diaries.push({
         id: row.id,
         content: row.content,
+        writtenTime: row.written_time,
       });
     });
 
@@ -213,6 +245,15 @@ app.post("/api/drafts/by-email", async (req, res) => {
       .json({ message: "각 임시저장 일기는 2자 이상 50자 미만이어야 합니다." });
   }
 
+  const draftTimeResult = normalizeDiaryTimeSeoul(req.body.diaryTime);
+  if (!draftTimeResult.ok) {
+    return res
+      .status(400)
+      .json({ message: "작성 시각은 HH:mm 또는 HH:mm:ss 형식(00:00~23:59:59)이어야 합니다." });
+  }
+
+  const draftDateTime = `${selectedDate} ${draftTimeResult.time}`;
+
   let client;
   try {
     client = await pool.connect();
@@ -255,7 +296,7 @@ app.post("/api/drafts/by-email", async (req, res) => {
         updated_at = NOW()
       WHERE d.user_id = $1
         AND d.is_deleted = false
-        AND DATE(timezone('Asia/Seoul', d.created_at)) = $2::date
+        AND d.created_at::date = $2::date
       `,
       [userId, selectedDate],
     );
@@ -264,7 +305,7 @@ app.post("/api/drafts/by-email", async (req, res) => {
       `
       DELETE FROM replies r
       WHERE r.user_id = $1
-        AND DATE(timezone('Asia/Seoul', r.diary_created_date)) = $2::date
+        AND r.diary_created_date::date = $2::date
       `,
       [userId, selectedDate],
     );
@@ -272,11 +313,11 @@ app.post("/api/drafts/by-email", async (req, res) => {
     const values = [];
     const params = [];
     normalizedContents.forEach((content, index) => {
-      const offset = index * 3;
+      const offset = index * 5;
       values.push(
-        `($${offset + 1}, $${offset + 2}, $${offset + 3}::date, NOW(), NOW())`,
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}::date, $${offset + 4}::timestamp, $${offset + 5}::timestamp)`,
       );
-      params.push(content, userId, selectedDate);
+      params.push(content, userId, selectedDate, draftDateTime, draftDateTime);
     });
 
     await client.query(
@@ -300,6 +341,7 @@ app.post("/api/drafts/by-email", async (req, res) => {
       totalDraftCount: existingDraftCount + normalizedContents.length,
       deletedDiaryCount: deleteDiariesResult.rowCount || 0,
       deletedRepliesCount: deleteRepliesResult.rowCount || 0,
+      diaryTime: draftTimeResult.time,
     });
   } catch (error) {
     if (client) {
@@ -332,7 +374,10 @@ app.get("/api/drafts/by-email", async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT d.id, d.content
+      SELECT
+        d.id,
+        d.content,
+        to_char(d.created_at, 'HH24:MI:SS') AS written_time
       FROM drafts d
       JOIN users u ON u.id = d.user_id
       WHERE u.email = $1
@@ -346,6 +391,7 @@ app.get("/api/drafts/by-email", async (req, res) => {
       drafts: result.rows.map((row) => ({
         id: row.id,
         content: row.content,
+        writtenTime: row.written_time,
       })),
     });
   } catch (error) {
@@ -424,23 +470,23 @@ app.get("/api/replies/calendar", async (req, res) => {
         latest.is_read
       FROM (
         SELECT
-          EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int AS day,
+          EXTRACT(DAY FROM r.diary_created_date)::int AS day,
           COUNT(*)::int AS count
         FROM replies r
         JOIN users u ON u.id = r.user_id
         WHERE u.email = $1
-          AND EXTRACT(YEAR FROM timezone('Asia/Seoul', r.diary_created_date))::int = $2
-          AND EXTRACT(MONTH FROM timezone('Asia/Seoul', r.diary_created_date))::int = $3
-        GROUP BY EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int
+          AND EXTRACT(YEAR FROM r.diary_created_date)::int = $2
+          AND EXTRACT(MONTH FROM r.diary_created_date)::int = $3
+        GROUP BY EXTRACT(DAY FROM r.diary_created_date)::int
       ) day_count
       JOIN LATERAL (
         SELECT r.reply_process_status, r.is_read
         FROM replies r
         JOIN users u ON u.id = r.user_id
         WHERE u.email = $1
-          AND EXTRACT(YEAR FROM timezone('Asia/Seoul', r.diary_created_date))::int = $2
-          AND EXTRACT(MONTH FROM timezone('Asia/Seoul', r.diary_created_date))::int = $3
-          AND EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int = day_count.day
+          AND EXTRACT(YEAR FROM r.diary_created_date)::int = $2
+          AND EXTRACT(MONTH FROM r.diary_created_date)::int = $3
+          AND EXTRACT(DAY FROM r.diary_created_date)::int = day_count.day
         ORDER BY r.updated_at DESC, r.id DESC
         LIMIT 1
       ) latest ON true
@@ -540,7 +586,7 @@ app.post("/api/clean/by-email", async (req, res) => {
       `
       DELETE FROM replies r
       WHERE r.user_id = $1
-        AND DATE(timezone('Asia/Seoul', r.diary_created_date)) = $2::date
+        AND r.diary_created_date::date = $2::date
       `,
       [userId, selectedDate],
     );
@@ -549,7 +595,7 @@ app.post("/api/clean/by-email", async (req, res) => {
       `
       DELETE FROM diaries d
       WHERE d.user_id = $1
-        AND DATE(timezone('Asia/Seoul', d.created_at)) = $2::date
+        AND d.created_at::date = $2::date
       `,
       [userId, selectedDate],
     );
@@ -631,8 +677,7 @@ app.delete("/api/diaries/:diaryId", async (req, res) => {
       FROM diaries d
       WHERE d.user_id = $1
         AND d.is_deleted = false
-        AND DATE(timezone('Asia/Seoul', d.created_at)) =
-            DATE(timezone('Asia/Seoul', $2::timestamptz))
+        AND d.created_at::date = ($2::timestamp)::date
       `,
       [deletedDiary.user_id, deletedDiary.created_at],
     );
@@ -643,8 +688,7 @@ app.delete("/api/diaries/:diaryId", async (req, res) => {
         `
         DELETE FROM replies r
         WHERE r.user_id = $1
-          AND DATE(timezone('Asia/Seoul', r.diary_created_date)) =
-              DATE(timezone('Asia/Seoul', $2::timestamptz))
+          AND r.diary_created_date::date = ($2::timestamp)::date
         `,
         [deletedDiary.user_id, deletedDiary.created_at],
       );
@@ -710,8 +754,7 @@ app.get("/api/replies/by-diary", async (req, res) => {
         r.reply_type
       FROM replies r
       WHERE r.user_id = $1
-        AND DATE(timezone('Asia/Seoul', r.diary_created_date)) =
-            DATE(timezone('Asia/Seoul', $2::timestamptz))
+        AND r.diary_created_date::date = ($2::timestamp)::date
       ORDER BY r.updated_at DESC, r.id DESC
       LIMIT 1
       `,
@@ -788,8 +831,7 @@ app.post("/api/replies", async (req, res) => {
       SELECT 1
       FROM replies r
       WHERE r.user_id = $1
-        AND DATE(timezone('Asia/Seoul', r.diary_created_date)) =
-            DATE(timezone('Asia/Seoul', $2::timestamptz))
+        AND r.diary_created_date::date = ($2::timestamp)::date
       LIMIT 1
       `,
       [diary.user_id, diary.created_at],
@@ -971,6 +1013,13 @@ app.post("/api/diaries/by-email", async (req, res) => {
       .json({ message: "각 일기는 2자 이상 50자 미만이어야 합니다." });
   }
 
+  const timeResult = normalizeDiaryTimeSeoul(req.body.diaryTime);
+  if (!timeResult.ok) {
+    return res
+      .status(400)
+      .json({ message: "작성 시각은 HH:mm 또는 HH:mm:ss 형식(00:00~23:59:59)이어야 합니다." });
+  }
+
   let client;
 
   try {
@@ -990,13 +1039,14 @@ app.post("/api/diaries/by-email", async (req, res) => {
     }
 
     const userId = userResult.rows[0].id;
+    const selectedDateTime = `${selectedDate} ${timeResult.time}`;
     const existingDiaryCountResult = await client.query(
       `
       SELECT COUNT(*)::int AS count
       FROM diaries d
       WHERE d.user_id = $1
         AND d.is_deleted = false
-        AND DATE(timezone('Asia/Seoul', d.created_at)) = $2::date
+        AND d.created_at::date = $2::date
       `,
       [userId, selectedDate],
     );
@@ -1011,16 +1061,13 @@ app.post("/api/diaries/by-email", async (req, res) => {
 
     const values = [];
     const params = [];
-    const selectedDateTime = `${selectedDate} 20:00:00`;
 
     normalizedContents.forEach((content, index) => {
       const offset = index * 8;
       values.push(
         `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${
           offset + 5
-        }, $${offset + 6}, ($${offset + 7}::timestamp AT TIME ZONE 'Asia/Seoul'), ($${
-          offset + 8
-        }::timestamp AT TIME ZONE 'Asia/Seoul'))`,
+        }, $${offset + 6}, $${offset + 7}::timestamp, $${offset + 8}::timestamp)`,
       );
       params.push(
         false,
@@ -1065,6 +1112,7 @@ app.post("/api/diaries/by-email", async (req, res) => {
     return res.json({
       message: `${insertResult.rows.length}개의 일기가 저장되었습니다.`,
       selectedDate,
+      diaryTime: timeResult.time,
       insertedCount: insertResult.rows.length,
       deletedDraftCount: deleteDraftsResult.rowCount || 0,
       diaries: insertResult.rows,

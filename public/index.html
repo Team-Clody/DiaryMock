@@ -37,6 +37,9 @@
         <p class="diary-guide">
           캘린더에서 날짜를 누른 뒤 모드를 선택해 작성하세요.
         </p>
+        <p id="diaryWriteBlockedHint" class="diary-write-blocked-hint hidden"></p>
+        <p id="draftWipesDiariesHint" class="draft-wipes-diaries-hint hidden"></p>
+        <p id="diaryWipesDraftsHint" class="diary-wipes-drafts-hint hidden"></p>
         <div class="mode-switch">
           <button id="diaryModeBtn" class="mode-btn active" type="button">일기작성 모드</button>
           <button id="draftModeBtn" class="mode-btn" type="button">임시저장 모드</button>
@@ -44,11 +47,15 @@
         <div id="cleanWrap" class="clean-wrap hidden">
           <button id="cleanBtn" type="button">클린</button>
         </div>
+        <div id="diaryTimeWrap" class="diary-time-row">
+          <label for="diaryTimeInput">작성 시각 (서울, 일기·임시저장 공통)</label>
+          <input id="diaryTimeInput" type="time" step="1" />
+        </div>
         <div id="diaryInputs" class="diary-inputs"></div>
         <div id="diaryModePanel">
-          <div class="diary-actions">
+          <div id="diaryComposeActions" class="diary-actions">
             <button id="addDiaryBtn" type="button">+</button>
-            <button id="saveDiaryBtn" type="button">전송</button>
+            <button id="saveDiaryBtn" type="button">작성하기</button>
           </div>
           <h3 class="sub-title">일기 목록</h3>
           <ul id="existingDiaries" class="existing-diaries"></ul>
@@ -56,7 +63,7 @@
         <div id="draftModePanel" class="hidden">
           <div class="diary-actions">
             <button id="addDraftBtn" type="button">+</button>
-            <button id="saveDraftBtn" type="button">임시저장</button>
+            <button id="saveDraftBtn" type="button">임시저장하기</button>
           </div>
           <h3 class="sub-title">임시저장 목록</h3>
           <ul id="draftList" class="draft-list"></ul>

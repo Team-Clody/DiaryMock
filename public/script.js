@@ -20,6 +20,12 @@ const diaryModePanel = document.getElementById("diaryModePanel");
 const draftModePanel = document.getElementById("draftModePanel");
 const cleanWrap = document.getElementById("cleanWrap");
 const cleanBtn = document.getElementById("cleanBtn");
+const diaryTimeInput = document.getElementById("diaryTimeInput");
+const diaryTimeWrap = document.getElementById("diaryTimeWrap");
+const diaryComposeActions = document.getElementById("diaryComposeActions");
+const diaryWriteBlockedHint = document.getElementById("diaryWriteBlockedHint");
+const draftWipesDiariesHint = document.getElementById("draftWipesDiariesHint");
+const diaryWipesDraftsHint = document.getElementById("diaryWipesDraftsHint");
 
 const year = new Date().getFullYear();
 const weekNames = ["일", "월", "화", "수", "목", "금", "토"];
@@ -56,6 +62,75 @@ function setMode(mode) {
   draftModePanel.classList.toggle("hidden", isDiaryMode);
   diaryModeBtn.classList.toggle("active", isDiaryMode);
   draftModeBtn.classList.toggle("active", !isDiaryMode);
+  syncDiaryWriteUi();
+  if (mode === "draft") {
+    loadDraftsForSelectedDay();
+  }
+}
+
+/** 선택한 날짜에 일기(미삭제)가 하나라도 있으면 true */
+function hasExistingDiariesForSelectedDay() {
+  return Boolean(selectedDay && (monthDiaryMap[selectedDay]?.count ?? 0) > 0);
+}
+
+/** 선택한 날짜에 임시저장이 하나라도 있으면 true (캘린더 집계 기준) */
+function hasDraftsForSelectedDay() {
+  return Boolean(selectedDay && (monthDraftMap[selectedDay]?.count ?? 0) > 0);
+}
+
+/** 일기 모드이고 해당 날에 일기가 있으면: 작성 시각·입력칸·+·작성하기 숨김 (삭제 후에만 다시 표시) */
+function syncDiaryWriteUi() {
+  const blockDiaryCompose =
+    currentMode === "diary" && hasExistingDiariesForSelectedDay();
+
+  if (blockDiaryCompose) {
+    diaryInputs.innerHTML = "";
+    diaryInputCount = 0;
+  }
+
+  diaryTimeWrap.classList.toggle("hidden", blockDiaryCompose);
+  diaryInputs.classList.toggle("hidden", blockDiaryCompose);
+  diaryComposeActions.classList.toggle("hidden", blockDiaryCompose);
+
+  if (blockDiaryCompose) {
+    diaryWriteBlockedHint.textContent =
+      "이 날짜에는 이미 일기가 있습니다. 다시 작성하려면 아래 목록에서 모두 삭제해야 합니다.";
+    diaryWriteBlockedHint.classList.remove("hidden");
+  } else {
+    diaryWriteBlockedHint.textContent = "";
+    diaryWriteBlockedHint.classList.add("hidden");
+  }
+
+  if (!blockDiaryCompose && diaryInputs.children.length === 0) {
+    diaryInputCount = 0;
+    createDiaryInput();
+  }
+
+  const showDraftWipeWarning =
+    currentMode === "draft" &&
+    Boolean(selectedDay) &&
+    hasExistingDiariesForSelectedDay();
+  if (showDraftWipeWarning) {
+    draftWipesDiariesHint.textContent =
+      "이 날짜에 이미 작성된 일기가 있습니다. 임시저장을하면 이 날짜의 \"일기\"는 서버에서 모두 삭제 처리되며, 같은 날짜의 답장도 함께 삭제됩니다.";
+    draftWipesDiariesHint.classList.remove("hidden");
+  } else {
+    draftWipesDiariesHint.textContent = "";
+    draftWipesDiariesHint.classList.add("hidden");
+  }
+
+  const showDiaryWipesDraftWarning =
+    currentMode === "diary" && Boolean(selectedDay) && hasDraftsForSelectedDay();
+  if (showDiaryWipesDraftWarning) {
+    diaryWipesDraftsHint.textContent =
+      "이 날짜에 이미 작성된 임시저장 일기가 있습니다. 일기 작성을 하면 이 날짜의 임시저장 일기는 모두 삭제됩니다.";
+    diaryWipesDraftsHint.classList.remove("hidden");
+  } else {
+    diaryWipesDraftsHint.textContent = "";
+    diaryWipesDraftsHint.classList.add("hidden");
+  }
+
+  syncDiaryButtons();
 }
 
 function syncCleanButton() {
@@ -81,6 +156,9 @@ function createDiaryInput(value = "") {
   if (diaryInputCount >= 5) {
     return;
   }
+  if (currentMode === "diary" && hasExistingDiariesForSelectedDay()) {
+    return;
+  }
   const input = document.createElement("input");
   input.type = "text";
   input.className = "diary-input";
@@ -95,7 +173,9 @@ function createDiaryInput(value = "") {
 function resetDiaryInputs() {
   diaryInputs.innerHTML = "";
   diaryInputCount = 0;
-  createDiaryInput();
+  if (!(currentMode === "diary" && hasExistingDiariesForSelectedDay())) {
+    createDiaryInput();
+  }
   syncDiaryButtons();
 }
 
@@ -109,9 +189,20 @@ function renderExistingDiaries() {
     const item = document.createElement("li");
     item.className = "existing-diary-item";
 
+    const meta = document.createElement("div");
+    meta.className = "diary-item-meta";
+
     const content = document.createElement("span");
     content.className = "diary-item-content";
     content.textContent = diary.content;
+    meta.appendChild(content);
+
+    if (diary.writtenTime) {
+      const timeEl = document.createElement("span");
+      timeEl.className = "item-written-time";
+      timeEl.textContent = ` 작성시간 ${diary.writtenTime}`;
+      meta.appendChild(timeEl);
+    }
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
@@ -121,7 +212,7 @@ function renderExistingDiaries() {
       deleteDiary(diary.id);
     });
 
-    item.appendChild(content);
+    item.appendChild(meta);
     item.appendChild(deleteButton);
 
     existingDiaries.appendChild(item);
@@ -236,9 +327,24 @@ function renderDrafts() {
     const item = document.createElement("li");
     item.className = "draft-item";
 
+    const meta = document.createElement("div");
+    meta.className = "draft-item-meta";
+    const indexSpan = document.createElement("span");
+    indexSpan.className = "draft-item-index";
+    indexSpan.textContent = `${index + 1}.`;
+    meta.appendChild(indexSpan);
+
     const content = document.createElement("span");
     content.className = "draft-item-content";
-    content.textContent = `${index + 1}. ${draft.content}`;
+    content.textContent = draft.content;
+    meta.appendChild(content);
+
+    if (draft.writtenTime) {
+      const timeEl = document.createElement("span");
+      timeEl.className = "item-written-time";
+      timeEl.textContent = ` 작성시간 ${draft.writtenTime}`;
+      meta.appendChild(timeEl);
+    }
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
@@ -248,7 +354,7 @@ function renderDrafts() {
       deleteDraft(draft.id);
     });
 
-    item.appendChild(content);
+    item.appendChild(meta);
     item.appendChild(deleteButton);
     draftList.appendChild(item);
   });
@@ -350,8 +456,9 @@ function renderCalendar(month) {
       diaryTitle.textContent = `${year}년 ${selectedMonth}월 ${selectedDay}일 일기 작성`;
       diaryResult.textContent = monthDiaryMap[selectedDay]
         ? "기존 일기 목록입니다. 새 일기를 작성해 추가 저장할 수 있습니다."
-        : "일기를 작성한 뒤 전송 버튼을 눌러주세요.";
+        : "일기를 작성한 뒤 작성하기 버튼을 눌러주세요.";
       resetDiaryInputs();
+      syncDiaryWriteUi();
       loadDraftsForSelectedDay();
       loadRepliesForSelectedDay();
       syncCleanButton();
@@ -414,6 +521,7 @@ async function loadMonthlyDiaries() {
     monthReplyMap = {};
     renderCalendar(selectedMonth);
     renderExistingDiaries();
+    syncDiaryWriteUi();
     return;
   }
 
@@ -424,6 +532,7 @@ async function loadMonthlyDiaries() {
     const data = await response.json();
     if (!response.ok) {
       monthDiaryMap = {};
+      syncDiaryWriteUi();
       return;
     }
     monthDiaryMap = data.byDay || {};
@@ -442,10 +551,12 @@ async function loadMonthlyDiaries() {
 
     renderCalendar(selectedMonth);
     await loadRepliesForSelectedDay();
+    syncDiaryWriteUi();
   } catch (error) {
     monthDiaryMap = {};
     monthDraftMap = {};
     monthReplyMap = {};
+    syncDiaryWriteUi();
   }
 }
 
@@ -544,6 +655,7 @@ async function searchEmail() {
     monthDraftMap = {};
     monthReplyMap = {};
     emailResult.textContent = "네트워크 오류가 발생했습니다.";
+    syncDiaryWriteUi();
   }
 }
 
@@ -563,15 +675,20 @@ async function saveDiaries() {
     return;
   }
 
+  if ((monthDiaryMap[selectedDay]?.count ?? 0) > 0) {
+    diaryResult.textContent =
+      "이 날짜에는 이미 일기가 있습니다. 다시 작성하려면 아래 목록에서 모두 삭제해야 합니다.";
+    return;
+  }
+
   const contents = collectDiaryContents();
   if (contents.length < 1) {
     diaryResult.textContent = "최소 1개의 일기를 입력해주세요.";
     return;
   }
 
-  const existingDiaryCount = monthDiaryMap[selectedDay]?.count ?? 0;
-  if (existingDiaryCount + contents.length > 5) {
-    diaryResult.textContent = `해당 날짜 일기는 최대 5개입니다. 현재 ${existingDiaryCount}개가 있어 ${5 - existingDiaryCount}개까지만 추가할 수 있습니다.`;
+  if (contents.length > 5) {
+    diaryResult.textContent = "일기는 한 번에 최대 5개까지 저장할 수 있습니다.";
     return;
   }
 
@@ -592,6 +709,7 @@ async function saveDiaries() {
       body: JSON.stringify({
         email: selectedEmail,
         selectedDate: formatSelectedDate(),
+        diaryTime: diaryTimeInput.value || "20:00",
         contents,
       }),
     });
@@ -602,9 +720,10 @@ async function saveDiaries() {
       return;
     }
 
-    diaryResult.textContent = `${data.selectedDate}에 ${data.insertedCount}개 저장 완료`;
+    diaryResult.textContent = `${data.selectedDate} ${data.diaryTime ?? ""} (서울)에 ${data.insertedCount}개 저장 완료`;
     resetDiaryInputs();
     await loadMonthlyDiaries();
+    await loadDraftsForSelectedDay();
     renderExistingDiaries();
   } catch (error) {
     diaryResult.textContent = "네트워크 오류가 발생했습니다.";
@@ -644,6 +763,7 @@ async function saveDraft() {
       body: JSON.stringify({
         email: selectedEmail,
         selectedDate: formatSelectedDate(),
+        diaryTime: diaryTimeInput.value || "20:00",
         contents,
       }),
     });
@@ -654,7 +774,7 @@ async function saveDraft() {
       return;
     }
 
-    diaryResult.textContent = `임시저장 ${data.insertedCount ?? contents.length}개 완료`;
+    diaryResult.textContent = `임시저장 ${data.insertedCount ?? contents.length}개 완료 (${data.diaryTime ?? ""} 서울)`;
     await loadMonthlyDiaries();
     await loadDraftsForSelectedDay();
   } catch (error) {
@@ -795,6 +915,7 @@ renderWeekNames();
 createMonthButtons();
 renderCalendar(selectedMonth);
 resetDiaryInputs();
+diaryTimeInput.value = "20:00";
 renderDrafts();
 setMode("diary");
 syncCleanButton();

@@ -177,6 +177,38 @@ h1 {
   font-size: 14px;
 }
 
+.diary-write-blocked-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.draft-wipes-diaries-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.diary-wipes-drafts-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef2ff;
+  border: 1px solid #a5b4fc;
+  color: #3730a3;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .mode-switch {
   display: flex;
   gap: 8px;
@@ -184,9 +216,6 @@ h1 {
 }
 
 .mode-btn {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 13px;
@@ -194,9 +223,27 @@ h1 {
   cursor: pointer;
 }
 
-.mode-btn.active {
+#diaryModeBtn:not(.active) {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+#diaryModeBtn.active {
   background: #2563eb;
-  border-color: #2563eb;
+  border: 1px solid #2563eb;
+  color: #ffffff;
+}
+
+#draftModeBtn:not(.active) {
+  border: 1px solid #5eead4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+#draftModeBtn.active {
+  background: #14b8a6;
+  border: 1px solid #14b8a6;
   color: #ffffff;
 }
 
@@ -240,6 +287,27 @@ h1 {
   font-size: 14px;
 }
 
+.diary-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.diary-time-row label {
+  font-size: 14px;
+  color: #374151;
+}
+
+.diary-time-row input[type="time"] {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
 .diary-actions {
   margin-top: 12px;
   display: flex;
@@ -255,7 +323,7 @@ h1 {
 }
 
 #addDiaryBtn {
-  background: #1d4ed8;
+  background: #2563eb;
   min-width: 44px;
   font-size: 20px;
   font-weight: 700;
@@ -263,7 +331,7 @@ h1 {
 }
 
 #addDraftBtn {
-  background: #0ea5e9;
+  background: #14b8a6;
   min-width: 44px;
   font-size: 20px;
   font-weight: 700;
@@ -271,11 +339,11 @@ h1 {
 }
 
 #saveDraftBtn {
-  background: #0f766e;
+  background: #14b8a6;
 }
 
 #saveDiaryBtn {
-  background: #111827;
+  background: #2563eb;
 }
 
 .diary-actions button:disabled {
@@ -344,10 +412,36 @@ h1 {
   padding: 10px 12px;
 }
 
+.diary-item-meta,
+.draft-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-written-time {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.draft-item-index {
+  font-weight: 600;
+  color: #0f766e;
+  flex-shrink: 0;
+}
+
 .diary-item-content {
   font-size: 16px;
   color: #1f2937;
   line-height: 1.35;
+  flex: 1;
+  min-width: 0;
 }
 
 .delete-diary-btn {
