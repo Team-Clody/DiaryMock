@@ -738,7 +738,7 @@ async function cleanSelectedDate() {
   }
 
   const shouldProceed = window.confirm(
-    `${formatSelectedDate()} 데이터(일기/답장/임시저장)를 모두 삭제할까요?`
+    `${formatSelectedDate()} 데이터(일기/답장/임시저장)를 모두 삭제할까요?\n\n추가로 삭제 내역도 같이 삭제됩니다.`
   );
   if (!shouldProceed) {
     return;
