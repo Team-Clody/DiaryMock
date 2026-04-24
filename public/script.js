@@ -249,7 +249,7 @@ function renderExistingDiaries() {
     pendingButton.addEventListener("click", () => {
       updateReply(dayReply.id, {
         replyProcessStatus: "PENDING",
-        replyType: dayReply.replyType || "FIRST",
+        replyType: dayReply.replyType || "DYNAMIC",
       });
     });
 
@@ -262,7 +262,7 @@ function renderExistingDiaries() {
         replyProcessStatus: "SUCCEED",
         isRead: dayReply.isRead,
         content: dayReply.content || "",
-        replyType: dayReply.replyType || "FIRST",
+        replyType: dayReply.replyType || "DYNAMIC",
       });
     });
 
@@ -282,7 +282,7 @@ function renderExistingDiaries() {
           replyProcessStatus: "SUCCEED",
           isRead: !dayReply.isRead,
           content: dayReply.content || "",
-          replyType: dayReply.replyType || "FIRST",
+          replyType: dayReply.replyType || "DYNAMIC",
         });
       });
       replyArea.appendChild(readToggleButton);
@@ -303,7 +303,7 @@ function renderExistingDiaries() {
           replyProcessStatus: "SUCCEED",
           isRead: dayReply.isRead,
           content: contentInput.value.trim(),
-          replyType: dayReply.replyType || "FIRST",
+          replyType: dayReply.replyType || "DYNAMIC",
         });
       });
       replyArea.appendChild(saveReplyContentButton);
@@ -576,7 +576,7 @@ async function createReply(diaryId) {
       body: JSON.stringify({
         email: selectedEmail,
         diaryId,
-        replyType: "FIRST",
+        replyType: "DYNAMIC",
       }),
     });
     const data = await response.json();

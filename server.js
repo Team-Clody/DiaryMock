@@ -784,7 +784,7 @@ app.get("/api/replies/by-diary", async (req, res) => {
 app.post("/api/replies", async (req, res) => {
   const diaryId = Number(req.body.diaryId);
   const email = String(req.body.email || "").trim();
-  const rawReplyType = String(req.body.replyType || "FIRST").trim().toUpperCase();
+  const rawReplyType = String(req.body.replyType || "DYNAMIC").trim().toUpperCase();
   const allowedReplyTypes = ["FIRST", "DYNAMIC", "DYANAMIC"];
   const replyType = rawReplyType === "DYANAMIC" ? "DYNAMIC" : rawReplyType;
 
@@ -914,7 +914,7 @@ app.patch("/api/replies/:replyId", async (req, res) => {
       .json({ message: "reply_process_status는 PENDING 또는 SUCCEED 이어야 합니다." });
   }
 
-  const rawReplyType = String(req.body.replyType || "FIRST").trim().toUpperCase();
+  const rawReplyType = String(req.body.replyType || "DYNAMIC").trim().toUpperCase();
   const allowedReplyTypes = ["FIRST", "DYNAMIC", "DYANAMIC"];
   const replyType = rawReplyType === "DYANAMIC" ? "DYNAMIC" : rawReplyType;
   if (!allowedReplyTypes.includes(replyType)) {
