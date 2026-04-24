@@ -6,6 +6,7 @@ const { Pool } = require("pg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 const AUTH_COOKIE_NAME = "clody_auth";
 const AUTH_COOKIE_VALUE = "ok";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "adminclody";
@@ -981,6 +982,6 @@ app.post("/api/diaries/by-email", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`DiaryMock server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`DiaryMock server running on http://${HOST}:${PORT}`);
 });
