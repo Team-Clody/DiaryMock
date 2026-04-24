@@ -204,6 +204,23 @@ h1 {
   display: none;
 }
 
+.clean-wrap {
+  margin: 0 0 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+#cleanBtn {
+  border: none;
+  background: #b91c1c;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .sub-title {
   margin: 14px 0 8px;
   font-size: 15px;

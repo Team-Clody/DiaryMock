@@ -504,6 +504,86 @@ app.delete("/api/drafts/:draftId", async (req, res) => {
   }
 });
 
+app.post("/api/clean/by-email", async (req, res) => {
+  const email = String(req.body.email || "").trim();
+  const selectedDate = String(req.body.selectedDate || "").trim();
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (!email) {
+    return res.status(400).json({ message: "email 값이 필요합니다." });
+  }
+
+  if (!datePattern.test(selectedDate)) {
+    return res
+      .status(400)
+      .json({ message: "선택된 날짜 형식이 올바르지 않습니다." });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    const userResult = await client.query(
+      "SELECT id FROM users WHERE email = $1 LIMIT 1",
+      [email],
+    );
+
+    if (userResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "해당 이메일 사용자가 없습니다." });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    const deleteRepliesResult = await client.query(
+      `
+      DELETE FROM replies r
+      WHERE r.user_id = $1
+        AND DATE(timezone('Asia/Seoul', r.diary_created_date)) = $2::date
+      `,
+      [userId, selectedDate],
+    );
+
+    const deleteDiariesResult = await client.query(
+      `
+      DELETE FROM diaries d
+      WHERE d.user_id = $1
+        AND DATE(timezone('Asia/Seoul', d.created_at)) = $2::date
+      `,
+      [userId, selectedDate],
+    );
+
+    const deleteDraftsResult = await client.query(
+      `
+      DELETE FROM drafts d
+      WHERE d.user_id = $1
+        AND d.date = $2::date
+      `,
+      [userId, selectedDate],
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      message: "해당 날짜 데이터가 모두 클린되었습니다.",
+      deletedDiariesCount: deleteDiariesResult.rowCount || 0,
+      deletedRepliesCount: deleteRepliesResult.rowCount || 0,
+      deletedDraftsCount: deleteDraftsResult.rowCount || 0,
+    });
+  } catch (error) {
+    if (client) {
+      await client.query("ROLLBACK");
+    }
+    console.error(error);
+    return res.status(500).json({ message: "클린 처리 중 오류가 발생했습니다." });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
 app.delete("/api/diaries/:diaryId", async (req, res) => {
   const diaryId = Number(req.params.diaryId);
   const email = String(req.body.email || "").trim();

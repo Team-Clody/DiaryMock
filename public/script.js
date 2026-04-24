@@ -18,6 +18,8 @@ const diaryModeBtn = document.getElementById("diaryModeBtn");
 const draftModeBtn = document.getElementById("draftModeBtn");
 const diaryModePanel = document.getElementById("diaryModePanel");
 const draftModePanel = document.getElementById("draftModePanel");
+const cleanWrap = document.getElementById("cleanWrap");
+const cleanBtn = document.getElementById("cleanBtn");
 
 const year = new Date().getFullYear();
 const weekNames = ["일", "월", "화", "수", "목", "금", "토"];
@@ -54,6 +56,10 @@ function setMode(mode) {
   draftModePanel.classList.toggle("hidden", isDiaryMode);
   diaryModeBtn.classList.toggle("active", isDiaryMode);
   draftModeBtn.classList.toggle("active", !isDiaryMode);
+}
+
+function syncCleanButton() {
+  cleanWrap.classList.toggle("hidden", !selectedDay);
 }
 
 function syncDiaryButtons() {
@@ -280,6 +286,7 @@ function createMonthButtons() {
       resetDiaryInputs();
       renderDrafts();
       renderExistingDiaries();
+      syncCleanButton();
       createMonthButtons();
       renderCalendar(selectedMonth);
       loadMonthlyDiaries();
@@ -347,6 +354,7 @@ function renderCalendar(month) {
       resetDiaryInputs();
       loadDraftsForSelectedDay();
       loadRepliesForSelectedDay();
+      syncCleanButton();
       renderCalendar(selectedMonth);
     });
     daysGrid.appendChild(dayCell);
@@ -718,6 +726,53 @@ async function deleteDraft(draftId) {
   }
 }
 
+async function cleanSelectedDate() {
+  if (!selectedDay) {
+    diaryResult.textContent = "먼저 캘린더에서 날짜를 선택해주세요.";
+    return;
+  }
+
+  if (!selectedEmail) {
+    diaryResult.textContent = "먼저 이메일 조회를 완료해주세요.";
+    return;
+  }
+
+  const shouldProceed = window.confirm(
+    `${formatSelectedDate()} 데이터(일기/답장/임시저장)를 모두 삭제할까요?`
+  );
+  if (!shouldProceed) {
+    return;
+  }
+
+  diaryResult.textContent = "클린 처리 중...";
+  try {
+    const response = await fetch("/api/clean/by-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: selectedEmail,
+        selectedDate: formatSelectedDate(),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      diaryResult.textContent = data.message || "클린 처리에 실패했습니다.";
+      return;
+    }
+
+    dayReply = null;
+    selectedDrafts = [];
+    diaryResult.textContent = `클린 완료 (일기 ${data.deletedDiariesCount}, 답장 ${data.deletedRepliesCount}, 임시 ${data.deletedDraftsCount})`;
+    await loadMonthlyDiaries();
+    await loadDraftsForSelectedDay();
+    await loadRepliesForSelectedDay();
+  } catch (error) {
+    diaryResult.textContent = "네트워크 오류가 발생했습니다.";
+  }
+}
+
 emailSearchBtn.addEventListener("click", searchEmail);
 emailInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -734,6 +789,7 @@ saveDraftBtn.addEventListener("click", saveDraft);
 saveDiaryBtn.addEventListener("click", saveDiaries);
 diaryModeBtn.addEventListener("click", () => setMode("diary"));
 draftModeBtn.addEventListener("click", () => setMode("draft"));
+cleanBtn.addEventListener("click", cleanSelectedDate);
 
 renderWeekNames();
 createMonthButtons();
@@ -741,3 +797,4 @@ renderCalendar(selectedMonth);
 resetDiaryInputs();
 renderDrafts();
 setMode("diary");
+syncCleanButton();
