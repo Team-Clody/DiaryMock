@@ -418,21 +418,43 @@ app.get("/api/replies/calendar", async (req, res) => {
     const result = await pool.query(
       `
       SELECT
-        EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int AS day,
-        COUNT(*)::int AS count
-      FROM replies r
-      JOIN users u ON u.id = r.user_id
-      WHERE u.email = $1
-        AND EXTRACT(YEAR FROM timezone('Asia/Seoul', r.diary_created_date))::int = $2
-        AND EXTRACT(MONTH FROM timezone('Asia/Seoul', r.diary_created_date))::int = $3
-      GROUP BY EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int
+        day_count.day,
+        day_count.count,
+        latest.reply_process_status,
+        latest.is_read
+      FROM (
+        SELECT
+          EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int AS day,
+          COUNT(*)::int AS count
+        FROM replies r
+        JOIN users u ON u.id = r.user_id
+        WHERE u.email = $1
+          AND EXTRACT(YEAR FROM timezone('Asia/Seoul', r.diary_created_date))::int = $2
+          AND EXTRACT(MONTH FROM timezone('Asia/Seoul', r.diary_created_date))::int = $3
+        GROUP BY EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int
+      ) day_count
+      JOIN LATERAL (
+        SELECT r.reply_process_status, r.is_read
+        FROM replies r
+        JOIN users u ON u.id = r.user_id
+        WHERE u.email = $1
+          AND EXTRACT(YEAR FROM timezone('Asia/Seoul', r.diary_created_date))::int = $2
+          AND EXTRACT(MONTH FROM timezone('Asia/Seoul', r.diary_created_date))::int = $3
+          AND EXTRACT(DAY FROM timezone('Asia/Seoul', r.diary_created_date))::int = day_count.day
+        ORDER BY r.updated_at DESC, r.id DESC
+        LIMIT 1
+      ) latest ON true
       `,
       [email, year, month],
     );
 
     const byDay = {};
     result.rows.forEach((row) => {
-      byDay[row.day] = { count: row.count };
+      byDay[row.day] = {
+        count: row.count,
+        status: row.reply_process_status,
+        isRead: row.is_read,
+      };
     });
 
     return res.json({ byDay });
@@ -610,7 +632,7 @@ app.get("/api/replies/by-diary", async (req, res) => {
       WHERE r.user_id = $1
         AND DATE(timezone('Asia/Seoul', r.diary_created_date)) =
             DATE(timezone('Asia/Seoul', $2::timestamptz))
-      ORDER BY r.created_at DESC
+      ORDER BY r.updated_at DESC, r.id DESC
       LIMIT 1
       `,
       [diary.user_id, diary.created_at],

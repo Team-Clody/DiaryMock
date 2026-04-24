@@ -152,6 +152,13 @@ h1 {
   color: #7c3aed;
 }
 
+.reply-status-badge {
+  margin-top: 4px;
+  display: inline-block;
+  font-size: 11px;
+  color: #475569;
+}
+
 .diary-card {
   margin-top: 16px;
   background: #ffffff;

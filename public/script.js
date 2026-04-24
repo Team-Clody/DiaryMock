@@ -33,6 +33,20 @@ let dayReply = null;
 let selectedDrafts = [];
 let currentMode = "diary";
 
+function formatReplyStatusLabel(status) {
+  if (status === "PENDING") {
+    return "준비중";
+  }
+  if (status === "SUCCEED") {
+    return "준비완료";
+  }
+  return "";
+}
+
+function formatReadLabel(isRead) {
+  return isRead ? "읽음" : "안읽음";
+}
+
 function setMode(mode) {
   currentMode = mode;
   const isDiaryMode = mode === "diary";
@@ -314,6 +328,11 @@ function renderCalendar(month) {
       replyBadge.className = "reply-badge";
       replyBadge.textContent = `답장 ${monthReplyMap[day].count}`;
       dayCell.appendChild(replyBadge);
+
+      const replyStatusBadge = document.createElement("span");
+      replyStatusBadge.className = "reply-status-badge";
+      replyStatusBadge.textContent = `${formatReplyStatusLabel(monthReplyMap[day].status)} / ${formatReadLabel(monthReplyMap[day].isRead)}`;
+      dayCell.appendChild(replyStatusBadge);
     }
 
     if (selectedDay === day) {
