@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const crypto = require("crypto");
 const express = require("express");
 const path = require("path");
 const { Pool } = require("pg");
@@ -8,9 +9,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 const AUTH_COOKIE_NAME = "clody_auth";
-const AUTH_COOKIE_VALUE = "ok";
+/** 로그인이 의미하는 평문 "ok"를 HMAC(서버 전용 키)로 인증: 쿠키 값 = ok.<HMAC> */
+const AUTH_OK_PLAINTEXT = "ok";
+/** HMAC 키: 코드에 넣지 말고 항상 .env 의 AUTH_SESSION_SECRET */
+const AUTH_SESSION_SECRET = process.env.AUTH_SESSION_SECRET;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "adminclody";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "adminclody";
+
+if (!AUTH_SESSION_SECRET || String(AUTH_SESSION_SECRET).trim().length < 32) {
+  console.error(
+    "ERROR: Set AUTH_SESSION_SECRET in .env (at least 32 random characters). Example:\n" +
+      '  node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n',
+  );
+  process.exit(1);
+}
+
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 5432),
@@ -33,6 +46,36 @@ function parseCookies(cookieHeader = "") {
     acc[rawKey] = decodeURIComponent(rawValue.join("="));
     return acc;
   }, {});
+}
+
+function hmacSessionToken(secret) {
+  const mac = crypto.createHmac("sha256", secret).update(AUTH_OK_PLAINTEXT).digest("hex");
+  return `${AUTH_OK_PLAINTEXT}.${mac}`;
+}
+
+function isValidSessionCookieValue(raw, secret) {
+  if (typeof raw !== "string" || !raw) {
+    return false;
+  }
+  const dot = raw.indexOf(".");
+  if (dot < 0) {
+    return false;
+  }
+  const payload = raw.slice(0, dot);
+  const macHex = raw.slice(dot + 1);
+  if (payload !== AUTH_OK_PLAINTEXT) {
+    return false;
+  }
+  if (macHex.length !== 64 || !/^[0-9a-f]+$/i.test(macHex)) {
+    return false;
+  }
+  const expected = crypto.createHmac("sha256", secret).update(AUTH_OK_PLAINTEXT).digest("hex");
+  const a = Buffer.from(expected, "hex");
+  const b = Buffer.from(macHex, "hex");
+  if (a.length !== b.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
 }
 
 /** 서울 달력 기준 일기 작성 시각 (HH:mm 또는 HH:mm:ss). 빈 값이면 20:00:00. */
@@ -67,7 +110,7 @@ function normalizeDiaryTimeSeoul(raw) {
 
 function isAuthenticated(req) {
   const cookies = parseCookies(req.headers.cookie || "");
-  return cookies[AUTH_COOKIE_NAME] === AUTH_COOKIE_VALUE;
+  return isValidSessionCookieValue(cookies[AUTH_COOKIE_NAME], AUTH_SESSION_SECRET);
 }
 
 app.get("/login", (req, res) => {
@@ -85,9 +128,10 @@ app.post("/api/auth/login", (req, res) => {
     return res.status(401).json({ message: "아이디 또는 비밀번호가 올바르지 않습니다." });
   }
 
+  const sessionToken = hmacSessionToken(AUTH_SESSION_SECRET);
   res.setHeader(
     "Set-Cookie",
-    `${AUTH_COOKIE_NAME}=${AUTH_COOKIE_VALUE}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`,
+    `${AUTH_COOKIE_NAME}=${sessionToken}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax`,
   );
   return res.json({ message: "로그인 성공" });
 });
